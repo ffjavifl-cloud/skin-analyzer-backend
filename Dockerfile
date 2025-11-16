@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.9
 
 # Instala dependencias del sistema necesarias para Pillow y otras librerías
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -13,15 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Instala pip y Torch/Torchvision versión CPU, luego el resto de dependencias
-RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir \
-    torch==2.1.1+cpu \
-    torchvision==0.16.0+cpu \
-    --index-url https://download.pytorch.org/whl/cpu \
- && pip install --no-cache-dir -r requirements.txt
-
-# Copia todos los archivos del proyecto al contenedor
-COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
 
 # Define el puerto y el comando de inicio
 ENV PORT=10000
