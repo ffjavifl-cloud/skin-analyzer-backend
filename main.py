@@ -51,6 +51,23 @@ async def analyze(file: UploadFile = File(...)):
             diagnosis += " Posible eritema/rojeces visibles."
         elif redness_index < -10:
             diagnosis += " Tono verdoso/azulado; revisar balance de color y luz."
+            # Estimar tono de piel según RGB promedio
+avg_rgb = (r_mean + g_mean + b_mean) / 3
+
+if avg_rgb > 230:
+    fitzpatrick = "Tipo I - Muy clara"
+elif avg_rgb > 200:
+    fitzpatrick = "Tipo II - Clara"
+elif avg_rgb > 170:
+    fitzpatrick = "Tipo III - Intermedia"
+elif avg_rgb > 130:
+    fitzpatrick = "Tipo IV - Oliva"
+elif avg_rgb > 90:
+    fitzpatrick = "Tipo V - Morena"
+else:
+    fitzpatrick = "Tipo VI - Muy oscura"
+
+diagnosis += f" | Tono estimado: {fitzpatrick}"
 
         return {
             "result": "Análisis completado",
