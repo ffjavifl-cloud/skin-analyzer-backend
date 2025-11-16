@@ -1,6 +1,5 @@
 fastapi
-uvicorn[standard]
+uvicorn
 pillow
-numpy
-facenet-pytorch
-scikit-image
+torch
+torchvision
