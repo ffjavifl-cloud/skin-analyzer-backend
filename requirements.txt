@@ -4,3 +4,5 @@ pillow
 torch
 torchvision
 python-multipart
+opencv-python==4.8.0.76
+numpy
