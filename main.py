@@ -1,12 +1,12 @@
 import io
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, ImageStat
 
 app = FastAPI()
 
-from fastapi.middleware.cors import CORSMiddleware
-
+# Habilitar CORS para que el frontend en GitHub Pages pueda acceder
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Puedes restringir esto a tu dominio más adelante
@@ -51,26 +51,24 @@ async def analyze(file: UploadFile = File(...)):
             diagnosis += " Posible eritema/rojeces visibles."
         elif redness_index < -10:
             diagnosis += " Tono verdoso/azulado; revisar balance de color y luz."
-            try:
-    # ... otras líneas ...
-    redness_index = r_mean - (g_mean + b_mean) / 2
 
-    # Estimar tono de piel según Fitzpatrick
-    avg_rgb = (r_mean + g_mean + b_mean) / 3
-    if avg_rgb > 230:
-        fitzpatrick = "Tipo I - Muy clara"
-    elif avg_rgb > 200:
-        fitzpatrick = "Tipo II - Clara"
-    elif avg_rgb > 170:
-        fitzpatrick = "Tipo III - Intermedia"
-    elif avg_rgb > 130:
-        fitzpatrick = "Tipo IV - Oliva"
-    elif avg_rgb > 90:
-        fitzpatrick = "Tipo V - Morena"
-    else:
-        fitzpatrick = "Tipo VI - Muy oscura"
+        # Estimar tono de piel según Fitzpatrick
+        avg_rgb = (r_mean + g_mean + b_mean) / 3
+        if avg_rgb > 230:
+            fitzpatrick = "Tipo I - Muy clara"
+        elif avg_rgb > 200:
+            fitzpatrick = "Tipo II - Clara"
+        elif avg_rgb > 170:
+            fitzpatrick = "Tipo III - Intermedia"
+        elif avg_rgb > 130:
+            fitzpatrick = "Tipo IV - Oliva"
+        elif avg_rgb > 90:
+            fitzpatrick = "Tipo V - Morena"
+        else:
+            fitzpatrick = "Tipo VI - Muy oscura"
 
-    diagnosis += f" | Tono estimado: {fitzpatrick}"
+        diagnosis += f" | Tono estimado: {fitzpatrick}"
+
         return {
             "result": "Análisis completado",
             "metrics": {
