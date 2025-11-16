@@ -1,9 +1,11 @@
 FROM python:3.10-slim
 
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir \
     torch==2.1.1+cpu \
     torchvision==0.16.0+cpu \
-    --index-url https://download.pytorch.org/whl/cpu
+    --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /app
 
