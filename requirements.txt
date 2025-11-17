@@ -4,4 +4,3 @@ pillow
 opencv-python
 numpy
 python-multipart
-image.resize((512, 512))
