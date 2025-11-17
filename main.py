@@ -69,6 +69,15 @@ def analyze_skin_features(image: Image.Image):
         "pores_visible": pores_score
     }
 
+# ✅ Nueva función: frases clínicas por parámetro
+def param_phrase(name: str, score: int) -> str:
+    if score <= 3:
+        return f"{name}: bajo"
+    elif score <= 6:
+        return f"{name}: moderado"
+    else:
+        return f"{name}: alto"
+
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     try:
@@ -132,6 +141,16 @@ async def analyze(file: UploadFile = File(...)):
         if scores["pores_visible"] > 6:
             diagnosis += " Poros visibles o textura irregular."
 
+        # ✅ Generar frases clínicas por parámetro
+        report = {
+            "Arrugas profundas": param_phrase("Arrugas profundas", scores["wrinkles_deep"]),
+            "Líneas finas": param_phrase("Líneas finas", scores["lines_fine"]),
+            "Pigmentación": param_phrase("Pigmentación", scores["pigmentation"]),
+            "Sequedad": param_phrase("Sequedad", scores["dryness"]),
+            "Brillo excesivo": param_phrase("Brillo excesivo", scores["brightness_excess"]),
+            "Poros visibles": param_phrase("Poros visibles", scores["pores_visible"]),
+        }
+
         return {
             "result": "Análisis completado",
             "metrics": {
@@ -145,7 +164,9 @@ async def analyze(file: UploadFile = File(...)):
                 "redness_index": round(redness_index, 2)
             },
             "scores": scores,
-            "diagnosis": diagnosis
+            "diagnosis": diagnosis,
+            "report": report,
+            "fitzpatrick": fitzpatrick
         }
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"Error procesando la imagen: {str(e)}"})
