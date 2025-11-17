@@ -21,35 +21,36 @@ app.add_middleware(
 def root():
     return {"status": "ok"}
 
+def safe_score(value, divisor):
+    try:
+        score = value / divisor
+        return min(10, max(0, int(score)))
+    except:
+        return 0
+
 def analyze_skin_features(image: Image.Image):
     img_cv = np.array(image)
     gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
 
-    # Arrugas profundas
     laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-    wrinkles_score = min(10, int(np.mean(np.abs(laplacian)) / 5))
+    wrinkles_score = safe_score(np.mean(np.abs(laplacian)), 5)
 
-    # Líneas finas
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
-    fine_lines_score = min(10, int((np.mean(np.abs(sobelx)) + np.mean(np.abs(sobely))) / 10))
+    fine_lines_score = safe_score(np.mean(np.abs(sobelx)) + np.mean(np.abs(sobely)), 10)
 
-    # Pigmentación
     dark_pixels = np.sum(gray < 50)
-    pigmentation_score = min(10, int(dark_pixels / (gray.size / 20)))
+    pigmentation_score = safe_score(dark_pixels, gray.size / 20)
 
-    # Sequedad
     stat = ImageStat.Stat(image.convert("L"))
-    dryness_score = min(10, int((130 - stat.mean[0]) + (50 - stat.stddev[0]) / 2))
+    dryness_score = safe_score((130 - stat.mean[0]) + (50 - stat.stddev[0]) / 2, 1)
 
-    # Brillo excesivo
     bright_pixels = np.sum(np.max(img_cv, axis=2) > 240)
-    brightness_score = min(10, int(bright_pixels / (gray.size / 20)))
+    brightness_score = safe_score(bright_pixels, gray.size / 20)
 
-    # Poros visibles
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     texture = cv2.subtract(gray, blurred)
-    pores_score = min(10, int(np.mean(np.abs(texture)) / 5))
+    pores_score = safe_score(np.mean(np.abs(texture)), 5)
 
     return {
         "wrinkles_deep": wrinkles_score,
@@ -109,13 +110,17 @@ async def analyze(file: UploadFile = File(...)):
         # Análisis clínico avanzado
         scores = analyze_skin_features(image)
 
-        # Diagnóstico complementario (puedes afinarlo tú)
+        # Diagnóstico complementario
         if scores["wrinkles_deep"] > 6:
             diagnosis += " Presencia de arrugas profundas."
+        if scores["lines_fine"] > 6:
+            diagnosis += " Líneas finas visibles."
         if scores["pigmentation"] > 6:
             diagnosis += " Pigmentación marcada."
         if scores["dryness"] > 6:
             diagnosis += " Sequedad visible."
+        if scores["brightness_excess"] > 6:
+            diagnosis += " Brillo excesivo en zonas específicas."
         if scores["pores_visible"] > 6:
             diagnosis += " Poros visibles o textura irregular."
 
