@@ -8,10 +8,10 @@ from PIL import Image, ImageStat, ImageOps
 
 app = FastAPI()
 
-# ✅ CORS corregido: solo frontend oficial, métodos y cabeceras explícitas
+# ✅ CORS corregido: permite tu frontend real en GitHub Pages
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ifl-cloud.github.io"],
+    allow_origins=["https://ffjavifl-cloud.github.io"],
     allow_credentials=True,
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type", "Accept"],
