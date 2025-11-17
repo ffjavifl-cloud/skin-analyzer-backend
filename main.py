@@ -8,10 +8,10 @@ from PIL import Image, ImageStat, ImageOps
 
 app = FastAPI()
 
-# CORS para GitHub Pages
+# CORS limitado solo a tu frontend en GitHub Pages
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Puedes restringir a ["https://ifl-cloud.github.io"] si lo prefieres
+    allow_origins=["https://ifl-cloud.github.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,35 +37,25 @@ def resize_max(image: Image.Image, max_side: int = 768) -> Image.Image:
     return image
 
 def analyze_skin_features(image: Image.Image):
-    # Convertir a array y a escala de grises
     img_cv = np.array(image)
-    if img_cv.ndim == 3 and img_cv.shape[2] == 3:
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
-    else:
-        gray = img_cv if img_cv.ndim == 2 else cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
 
-    # Arrugas profundas: Laplaciano
     laplacian = cv2.Laplacian(gray, cv2.CV_64F)
     wrinkles_score = safe_score(np.mean(np.abs(laplacian)), 5)
 
-    # Líneas finas: Sobel combinado
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
     fine_lines_score = safe_score(np.mean(np.abs(sobelx)) + np.mean(np.abs(sobely)), 10)
 
-    # Pigmentación: píxeles oscuros
     dark_pixels = np.sum(gray < 50)
     pigmentation_score = safe_score(dark_pixels, gray.size / 20)
 
-    # Sequedad: baja media y baja desviación (textura pobre)
-    stat_L = ImageStat.Stat(Image.fromarray(gray))
-    dryness_score = safe_score((130 - stat_L.mean[0]) + (50 - stat_L.stddev[0]) / 2, 1)
+    stat = ImageStat.Stat(image.convert("L"))
+    dryness_score = safe_score((130 - stat.mean[0]) + (50 - stat.stddev[0]) / 2, 1)
 
-    # Brillo excesivo: umbral alto en canal máximo
-    bright_pixels = np.sum(np.max(img_cv, axis=2) > 240) if img_cv.ndim == 3 else np.sum(gray > 240)
+    bright_pixels = np.sum(np.max(img_cv, axis=2) > 240)
     brightness_score = safe_score(bright_pixels, gray.size / 20)
 
-    # Poros/ textura: diferencia con blur
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     texture = cv2.subtract(gray, blurred)
     pores_score = safe_score(np.mean(np.abs(texture)), 5)
@@ -82,17 +72,14 @@ def analyze_skin_features(image: Image.Image):
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     try:
-        # Validación básica de tipo
         if not file.content_type or not file.content_type.startswith("image/"):
             return JSONResponse(status_code=400, content={"error": "El archivo subido no es una imagen válida."})
 
         contents = await file.read()
-        # Abrir imagen, corregir orientación EXIF y redimensionar para rendimiento
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         image = ImageOps.exif_transpose(image)
         image = resize_max(image, max_side=768)
 
-        # Métricas básicas
         gray = image.convert("L")
         stat = ImageStat.Stat(gray)
         brightness = stat.mean[0]
@@ -102,7 +89,6 @@ async def analyze(file: UploadFile = File(...)):
         r_mean, g_mean, b_mean = color_stat.mean
         redness_index = r_mean - (g_mean + b_mean) / 2
 
-        # Diagnóstico básico de tono + rojez
         if brightness < 60:
             diagnosis = "Tendencia a hiperpigmentación u oscuridad; revisar exposición y hidratación."
         elif brightness > 190:
@@ -115,7 +101,6 @@ async def analyze(file: UploadFile = File(...)):
         elif redness_index < -10:
             diagnosis += " Tono verdoso/azulado; revisar balance de color y luz."
 
-        # Fitzpatrick estimado
         avg_rgb = (r_mean + g_mean + b_mean) / 3
         if avg_rgb > 230:
             fitzpatrick = "Tipo I - Muy clara"
@@ -132,10 +117,8 @@ async def analyze(file: UploadFile = File(...)):
 
         diagnosis += f" | Tono estimado: {fitzpatrick}"
 
-        # Análisis clínico avanzado
         scores = analyze_skin_features(image)
 
-        # Diagnóstico complementario por parámetros
         if scores["wrinkles_deep"] > 6:
             diagnosis += " Presencia de arrugas profundas."
         if scores["lines_fine"] > 6:
