@@ -1,17 +1,26 @@
-# Usa una imagen base de Python
-FROM python:3.9
+# Imagen base con Python
+FROM python:3.9-slim
 
-# Establece el directorio de trabajo dentro del contenedor
+# Instalar dependencias del sistema necesarias para OpenCV
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear directorio de trabajo
 WORKDIR /app
 
-# Copia el archivo de dependencias primero
-COPY requirements.txt .
+# Copiar archivos del proyecto
+COPY . /app
 
-# Instala las dependencias
+# Instalar dependencias Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia el resto de los archivos del proyecto
-COPY . .
+# Exponer el puerto para Uvicorn
+EXPOSE 8000
 
-# Comando para iniciar el servidor FastAPI con Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Comando para iniciar FastAPI con Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
