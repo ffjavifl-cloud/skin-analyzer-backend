@@ -1,4 +1,4 @@
-import io
+import io, os, json
 import numpy as np
 import cv2
 from fastapi import FastAPI, UploadFile, File
@@ -8,7 +8,6 @@ from PIL import Image, ImageStat, ImageOps
 
 app = FastAPI()
 
-# ✅ CORS corregido: permite tu frontend real en GitHub Pages
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://ffjavifl-cloud.github.io"],
@@ -21,12 +20,30 @@ app.add_middleware(
 def root():
     return {"status": "ok"}
 
+# ✅ Carga calibración si existe
+CALIBRATION_PATH = "calibration.json"
+CALIBRATION = None
+try:
+    with open(CALIBRATION_PATH, "r") as f:
+        CALIBRATION = json.load(f)
+except:
+    CALIBRATION = None
+
 def safe_score(value, divisor):
     try:
         score = value / divisor
         return min(10, max(0, int(score)))
     except Exception:
         return 0
+
+# ✅ Score calibrado si hay calibration.json
+def score_with_calibration(value, key, default_divisor):
+    if CALIBRATION and key in CALIBRATION:
+        sev = CALIBRATION[key]["severe"]["mean"]
+        mild = CALIBRATION[key]["mild"]["mean"]
+        scaled = 10 * (value - mild) / max(1e-6, (sev - mild))
+        return int(np.clip(scaled, 0, 10))
+    return safe_score(value, default_divisor)
 
 def resize_max(image: Image.Image, max_side: int = 768) -> Image.Image:
     w, h = image.size
@@ -41,24 +58,24 @@ def analyze_skin_features(image: Image.Image):
     gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
 
     laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-    wrinkles_score = safe_score(np.mean(np.abs(laplacian)), 5)
+    wrinkles_score = score_with_calibration(np.mean(np.abs(laplacian)), "wrinkles", 5)
 
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
-    fine_lines_score = safe_score(np.mean(np.abs(sobelx)) + np.mean(np.abs(sobely)), 10)
+    fine_lines_score = score_with_calibration(np.mean(np.abs(sobelx)) + np.mean(np.abs(sobely)), "lines", 10)
 
     dark_pixels = np.sum(gray < 50)
-    pigmentation_score = safe_score(dark_pixels, gray.size / 20)
+    pigmentation_score = score_with_calibration(dark_pixels, "pigmentation", gray.size / 20)
 
     stat = ImageStat.Stat(image.convert("L"))
-    dryness_score = safe_score((130 - stat.mean[0]) + (50 - stat.stddev[0]) / 2, 1)
+    dryness_score = score_with_calibration((130 - stat.mean[0]) + (50 - stat.stddev[0]) / 2, "dryness", 1)
 
     bright_pixels = np.sum(np.max(img_cv, axis=2) > 240)
-    brightness_score = safe_score(bright_pixels, gray.size / 20)
+    brightness_score = score_with_calibration(bright_pixels, "brightness", gray.size / 20)
 
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     texture = cv2.subtract(gray, blurred)
-    pores_score = safe_score(np.mean(np.abs(texture)), 5)
+    pores_score = score_with_calibration(np.mean(np.abs(texture)), "texture-pores", 5)
 
     return {
         "wrinkles_deep": wrinkles_score,
@@ -69,14 +86,16 @@ def analyze_skin_features(image: Image.Image):
         "pores_visible": pores_score
     }
 
-# ✅ Nueva función: frases clínicas por parámetro
+# ✅ Frase clínica por score
 def param_phrase(name: str, score: int) -> str:
-    if score <= 3:
-        return f"{name}: bajo"
-    elif score <= 6:
-        return f"{name}: moderado"
+    if score >= 8:
+        return f"{name}: nivel alto"
+    elif score >= 5:
+        return f"{name}: nivel moderado"
+    elif score >= 3:
+        return f"{name}: nivel bajo"
     else:
-        return f"{name}: alto"
+        return f"{name}: nivel muy bajo"
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
@@ -141,15 +160,39 @@ async def analyze(file: UploadFile = File(...)):
         if scores["pores_visible"] > 6:
             diagnosis += " Poros visibles o textura irregular."
 
-        # ✅ Generar frases clínicas por parámetro
-        report = {
-            "Arrugas profundas": param_phrase("Arrugas profundas", scores["wrinkles_deep"]),
-            "Líneas finas": param_phrase("Líneas finas", scores["lines_fine"]),
-            "Pigmentación": param_phrase("Pigmentación", scores["pigmentation"]),
-            "Sequedad": param_phrase("Sequedad", scores["dryness"]),
-            "Brillo excesivo": param_phrase("Brillo excesivo", scores["brightness_excess"]),
-            "Poros visibles": param_phrase("Poros visibles", scores["pores_visible"]),
-        }
+        # ✅ Reporte estructurado con score + frase
+        report = [
+            {
+                "parameter": "Arrugas profundas",
+                "score": scores["wrinkles_deep"],
+                "clinical_phrase": param_phrase("Arrugas profundas", scores["wrinkles_deep"])
+            },
+            {
+                "parameter": "Líneas finas",
+                "score": scores["lines_fine"],
+                "clinical_phrase": param_phrase("Líneas finas", scores["lines_fine"])
+            },
+            {
+                "parameter": "Pigmentación",
+                "score": scores["pigmentation"],
+                "clinical_phrase": param_phrase("Pigmentación", scores["pigmentation"])
+            },
+            {
+                "parameter": "Sequedad",
+                "score": scores["dryness"],
+                "clinical_phrase": param_phrase("Sequedad", scores["dryness"])
+            },
+            {
+                "parameter": "Brillo excesivo",
+                "score": scores["brightness_excess"],
+                "clinical_phrase": param_phrase("Brillo excesivo", scores["brightness_excess"])
+            },
+            {
+                "parameter": "Poros visibles",
+                "score": scores["pores_visible"],
+                "clinical_phrase": param_phrase("Poros visibles", scores["pores_visible"])
+            }
+        ]
 
         return {
             "result": "Análisis completado",
