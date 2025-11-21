@@ -3,24 +3,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
 
-# Asegúrate de que model.py esté en la misma carpeta
+# Importa la función de predicción desde model.py
 from model import predict_scores
 
-app = FastAPI(title="Aging Analyzer API")
+# Inicializa la aplicación FastAPI
+app = FastAPI(title="Skin Analyzer Training API")
 
-# CORS: permite conexión desde tu frontend en GitHub Pages
+# Configuración de CORS: permite conexión desde tu frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Puedes restringir a ["https://ffjavifl-cloud.github.io"]
+    allow_origins=["*"],  # ⚠️ Puedes restringir a ["https://ffjavifl-cloud.github.io"] para mayor seguridad
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Endpoint raíz para verificar estado
 @app.get("/")
 def root():
     return {"status": "ok"}
 
+# Endpoint principal de análisis
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     try:
