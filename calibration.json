@@ -1,0 +1,26 @@
+{
+    "brightness": {
+        "mild": 0.0,
+        "severe": 0.0
+    },
+    "dryness": {
+        "mild": 0.0,
+        "severe": 0.7811
+    },
+    "lines": {
+        "mild": 0.0,
+        "severe": 0.0
+    },
+    "pigmentation": {
+        "mild": 0.5798,
+        "severe": 0.4918
+    },
+    "texture-pores": {
+        "mild": 0.0,
+        "severe": 0.0
+    },
+    "wrinkles": {
+        "mild": 0.0,
+        "severe": 0.0
+    }
+}
