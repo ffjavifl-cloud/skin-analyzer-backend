@@ -1,26 +1,20 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import json
+from PIL import Image
+import io
 
-app = FastAPI()
+from model import predict_scores
 
-# Habilitar CORS para permitir conexión desde el frontend en GitHub Pages
+app = FastAPI(title="Aging Analyzer API")
+
+# CORS: restringe si quieres a tu dominio GitHub Pages
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Puedes reemplazar "*" por tu dominio exacto si lo prefieres
+    allow_origins=["*"],  # Ejemplo: ["https://ffjavifl-cloud.github.io"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Cargar calibración desde archivo
-try:
-    with open("calibration.json", "r") as f:
-        calibration = json.load(f)
-except Exception as e:
-    calibration = {}
-    print(f"⚠️ Error al cargar calibration.json: {e}")
 
 @app.get("/")
 def root():
@@ -28,12 +22,26 @@ def root():
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-    report = {}
-    for param, values in calibration.items():
-        score = (values.get("severe", 0) * 10) / (values.get("mild", 1) + 1)
-        report[param] = round(score, 1)
+    try:
+        raw = await file.read()
+        image = Image.open(io.BytesIO(raw)).convert("RGB")
+        scores = predict_scores(image)
 
-    return {
-        "scores": report,
-        "diagnosis": "Informe clínico generado con calibración"
-    }
+        # Diagnóstico breve basado en las métricas dominantes
+        top_param = max(scores, key=lambda k: scores[k])
+        diagnosis_map = {
+            "dryness": "Signos de sequedad prominentes.",
+            "pigmentation": "Pigmentación destacada.",
+            "wrinkles": "Arrugas marcadas.",
+            "lines": "Líneas visibles.",
+            "texture-pores": "Textura/poros acentuados.",
+            "brightness": "Brillo bajo (posible iluminación subóptima)."
+        }
+        diagnosis = diagnosis_map.get(top_param, "Evaluación clínica general.")
+
+        return {
+            "diagnosis": diagnosis,
+            "scores": scores
+        }
+    except Exception as e:
+        return {"error": "No se pudo procesar la imagen", "details": str(e)}
