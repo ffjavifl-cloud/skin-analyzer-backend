@@ -18,10 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Endpoint raíz para verificar estado
+# ✅ Nuevo endpoint rápido para verificación de estado
+@app.get("/status")
+def status():
+    return {"status": "ok"}
+
+# Endpoint raíz (opcional)
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"message": "Skin Analyzer API activa"}
 
 # Endpoint principal de análisis
 @app.post("/analyze")
