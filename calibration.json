@@ -1,26 +1,26 @@
 {
-    "brightness": {
-        "mild": 0.0,
-        "severe": 0.0
-    },
-    "dryness": {
-        "mild": 0.0,
-        "severe": 0.7811
-    },
-    "lines": {
-        "mild": 0.0,
-        "severe": 0.0
-    },
-    "pigmentation": {
-        "mild": 0.5798,
-        "severe": 0.4918
-    },
-    "texture-pores": {
-        "mild": 0.0,
-        "severe": 0.0
-    },
-    "wrinkles": {
-        "mild": 0.0,
-        "severe": 0.0
-    }
+  "brightness": {
+    "low": 40,
+    "high": 180
+  },
+  "dryness": {
+    "low": 0.0005,
+    "high": 0.01
+  },
+  "lines": {
+    "low": 0.005,
+    "high": 0.08
+  },
+  "pigmentation": {
+    "low": 0.002,
+    "high": 0.12
+  },
+  "texture-pores": {
+    "low": 0.5,
+    "high": 5.0
+  },
+  "wrinkles": {
+    "low": 0.01,
+    "high": 0.12
+  }
 }
