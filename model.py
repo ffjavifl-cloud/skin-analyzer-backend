@@ -7,7 +7,9 @@ def predict_scores(image: Image.Image) -> dict:
     Utiliza calibrate.py para aplicar lógica dermatológica y evitar exageraciones.
     """
     try:
+        print("🔍 Ejecutando análisis clínico...")
         result = analyze_and_calibrate(image, calibration_path="calibration.json")
+        print("✅ Resultado:", result)
         return result["scores"]
     except Exception as e:
         print(f"❌ Error en calibración: {e}")
