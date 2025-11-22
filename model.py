@@ -11,10 +11,15 @@ def predict_scores(image: Image.Image) -> dict:
         result = analyze_and_calibrate(image, calibration_path="calibration.json")
         print("✅ Resultado:", result)
 
-        if "scores" not in result or not isinstance(result["scores"], dict):
-            raise ValueError("El resultado no contiene scores válidos.")
+        scores = result.get("scores", {})
+        if not isinstance(scores, dict) or not scores:
+            raise ValueError("No se generaron scores válidos.")
 
-        return result["scores"]
+        for k, v in scores.items():
+            if not isinstance(v, (int, float)):
+                raise ValueError(f"Score inválido para {k}: {v}")
+
+        return scores
 
     except Exception as e:
         print(f"❌ Error en calibración: {e}")
