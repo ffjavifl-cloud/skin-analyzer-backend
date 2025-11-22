@@ -1,9 +1,10 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from PIL import Image
 import io
 
-# Importa la función de predicción desde model.py
+# Importa la función calibrada desde model.py
 from model import predict_scores
 
 # Inicializa la aplicación FastAPI
@@ -18,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Nuevo endpoint rápido para verificación de estado
+# ✅ Endpoint rápido para verificación de estado
 @app.get("/status")
 def status():
     return {"status": "ok"}
@@ -34,10 +35,13 @@ async def analyze(file: UploadFile = File(...)):
     try:
         # Leer imagen enviada
         raw = await file.read()
+        print(f"📥 Imagen recibida: {file.filename}, tamaño: {len(raw)} bytes")
+
         image = Image.open(io.BytesIO(raw)).convert("RGB")
 
-        # Analizar imagen con tu modelo clínico
+        # Analizar imagen con modelo calibrado
         scores = predict_scores(image)
+        print(f"✅ Scores generados: {scores}")
 
         # Diagnóstico basado en el parámetro más alto
         top_param = max(scores, key=lambda k: scores[k])
@@ -57,8 +61,11 @@ async def analyze(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        # Manejo de errores para que Swagger y el frontend lo vean
-        return {
-            "error": "No se pudo procesar la imagen",
-            "details": str(e)
-        }
+        print(f"❌ Error en análisis: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "No se pudo procesar la imagen",
+                "details": str(e)
+            }
+        )
