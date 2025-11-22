@@ -10,7 +10,12 @@ def predict_scores(image: Image.Image) -> dict:
         print("🔍 Ejecutando análisis clínico...")
         result = analyze_and_calibrate(image, calibration_path="calibration.json")
         print("✅ Resultado:", result)
+
+        if "scores" not in result or not isinstance(result["scores"], dict):
+            raise ValueError("El resultado no contiene scores válidos.")
+
         return result["scores"]
+
     except Exception as e:
         print(f"❌ Error en calibración: {e}")
         return {
