@@ -1,49 +1,47 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import io
 
-# Importa la función calibrada desde model.py
 from model import predict_scores
 
-# Inicializa la aplicación FastAPI
 app = FastAPI(title="Skin Analyzer Training API")
 
-# Configuración de CORS: permite conexión desde tu frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ Puedes restringir a ["https://ffjavifl-cloud.github.io"] para mayor seguridad
+    allow_origins=["*"],  # Puedes restringir a tu dominio
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Endpoint rápido para verificación de estado
 @app.get("/status")
 def status():
     return {"status": "ok"}
 
-# Endpoint raíz (opcional)
 @app.get("/")
 def root():
     return {"message": "Skin Analyzer API activa"}
 
-# Endpoint principal de análisis
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     try:
-        # Leer imagen enviada
         raw = await file.read()
         print(f"📥 Imagen recibida: {file.filename}, tamaño: {len(raw)} bytes")
 
-        image = Image.open(io.BytesIO(raw)).convert("RGB")
+        try:
+            image = Image.open(io.BytesIO(raw)).convert("RGB")
+            print(f"🖼️ Imagen convertida a RGB: {image.size}")
+        except UnidentifiedImageError:
+            raise ValueError("La imagen no se pudo abrir. Verifica el formato.")
 
-        # Analizar imagen con modelo calibrado
         scores = predict_scores(image)
         print(f"✅ Scores generados: {scores}")
 
-        # Diagnóstico basado en el parámetro más alto
+        if not isinstance(scores, dict) or not scores:
+            raise ValueError("No se generaron scores válidos.")
+
         top_param = max(scores, key=lambda k: scores[k])
         diagnosis_map = {
             "dryness": "Signos de sequedad prominentes.",
