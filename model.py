@@ -8,8 +8,9 @@ def predict_scores(image: Image.Image) -> dict:
     """
     try:
         print("🔍 Ejecutando análisis clínico...")
+
         result = analyze_and_calibrate(image, calibration_path="calibration.json")
-        print("✅ Resultado:", result)
+        print("✅ Resultado recibido:", result)
 
         scores = result.get("scores", {})
         if not isinstance(scores, dict) or not scores:
@@ -18,6 +19,8 @@ def predict_scores(image: Image.Image) -> dict:
         for k, v in scores.items():
             if not isinstance(v, (int, float)):
                 raise ValueError(f"Score inválido para {k}: {v}")
+            if v < 0 or v > 10:
+                print(f"⚠️ Score fuera de rango para {k}: {v}")
 
         return scores
 
