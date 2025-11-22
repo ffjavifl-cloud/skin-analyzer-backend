@@ -1,26 +1,26 @@
 {
   "brightness": {
-    "low": 40,
-    "high": 180
+    "low": 30.0,
+    "high": 160.0
   },
   "dryness": {
-    "low": 0.0005,
-    "high": 0.01
+    "low": 0.001,
+    "high": 0.02
   },
   "lines": {
-    "low": 0.005,
-    "high": 0.08
+    "low": 0.01,
+    "high": 0.07
   },
   "pigmentation": {
     "low": 0.002,
-    "high": 0.12
+    "high": 0.045
   },
   "texture-pores": {
-    "low": 0.5,
-    "high": 5.0
+    "low": 0.01,
+    "high": 0.08
   },
   "wrinkles": {
     "low": 0.01,
-    "high": 0.12
+    "high": 0.06
   }
 }
