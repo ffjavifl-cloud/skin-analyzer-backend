@@ -5,7 +5,7 @@ from PIL import Image
 import io
 
 # Importa la función de predicción desde model.py
-from model import predict_scores
+from model import predict_scores, classify_severity  # ✅ Importa ambas desde model.py
 
 # Inicializa la aplicación FastAPI
 app = FastAPI(title="Skin Analyzer Training API")
@@ -25,15 +25,6 @@ EMOJIS = {
     "Moderate": "🟠",
     "Severe": "🔴"
 }
-
-# Clasificación clínica universal con rango intermedio
-def classify_severity(score: float) -> str:
-    if score < 4.5:
-        return "Mild"
-    elif score < 6.5:
-        return "Moderate"
-    else:
-        return "Severe"
 
 # Endpoint raíz para verificar estado
 @app.get("/")
