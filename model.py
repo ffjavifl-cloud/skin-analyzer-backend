@@ -1,36 +1,35 @@
+import os
 from PIL import Image
-from calibrate import analyze_and_calibrate
+import joblib  # opcional si quieres verificar el modelo
 
-def predict_scores(image: Image.Image) -> dict:
-    """
-    Recibe una imagen PIL y devuelve los scores clínicos calibrados.
-    Utiliza calibrate.py para aplicar lógica dermatológica y evitar exageraciones.
-    """
-    try:
-        print("🔍 Ejecutando análisis clínico...")
+# Emojis por severidad (mismo criterio universal 4.5–6.5)
+EMOJIS = {
+    "Mild": "🟢",
+    "Moderate": "🟠",
+    "Severe": "🔴"
+}
 
-        result = analyze_and_calibrate(image, calibration_path="calibration.json")
-        print("✅ Resultado recibido:", result)
+def classify_severity(score: float) -> str:
+    if score < 4.5:
+        return "Mild"
+    elif score < 6.5:
+        return "Moderate"
+    else:
+        return "Severe"
 
-        scores = result.get("scores", {})
-        if not isinstance(scores, dict) or not scores:
-            raise ValueError("No se generaron scores válidos.")
+if __name__ == "__main__":
+    # Ruta de la imagen a evaluar (misma que usas en Swagger)
+    image_path = "test_image.jpg"  # cambia si usas otra imagen
 
-        for k, v in scores.items():
-            if not isinstance(v, (int, float)):
-                raise ValueError(f"Score inválido para {k}: {v}")
-            if v < 0 or v > 10:
-                print(f"⚠️ Score fuera de rango para {k}: {v}")
+    if not os.path.exists(image_path):
+        print(f"⚠️ Imagen no encontrada: {image_path}")
+    else:
+        # Abrir como PIL y pasarla directa a predict_scores
+        image = Image.open(image_path).convert("RGB")
+        scores = predict_scores(image)
 
-        return scores
-
-    except Exception as e:
-        print(f"❌ Error en calibración: {e}")
-        return {
-            "brightness": 0.0,
-            "dryness": 0.0,
-            "lines": 0.0,
-            "pigmentation": 0.0,
-            "texture-pores": 0.0,
-            "wrinkles": 0.0
-        }
+        print("📊 Resultados clínicos:")
+        for param, score in scores.items():
+            estado = classify_severity(score)
+            emoji = EMOJIS[estado]
+            print(f"🔹 {param}: {score} → {estado} {emoji}")
